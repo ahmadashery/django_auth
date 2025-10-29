@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Welcome</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 800px;
+                margin: 50px auto;
+                padding: 20px;
+            }
+            .container {
+                background-color: #f9f9f9;
+                padding: 30px;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+            h1 {
+                color: #333;
+            }
+            .user-info {
+                background-color: white;
+                padding: 20px;
+                border-radius: 4px;
+                margin: 20px 0;
+            }
+            .ga-status {
+                background-color: white;
+                padding: 20px;
+                border-radius: 4px;
+                margin: 20px 0;
+            }
+            .connected {
+                color: green;
+                font-weight: bold;
+            }
+            .not-connected {
+                color: orange;
+                font-weight: bold;
+            }
+            button,
+            .button {
+                background-color: #4caf50;
+                color: white;
+                padding: 10px 20px;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                text-decoration: none;
+                display: inline-block;
+                margin: 5px;
+            }
+            button:hover,
+            .button:hover {
+                background-color: #45a049;
+            }
+            .logout-btn {
+                background-color: #f44336;
+            }
+            .logout-btn:hover {
+                background-color: #da190b;
+            }
+            .disconnect-btn {
+                background-color: #ff9800;
+            }
+            .disconnect-btn:hover {
+                background-color: #e68900;
+            }
+            #properties {
+                margin-top: 20px;
+                background-color: white;
+                padding: 20px;
+                border-radius: 4px;
+            }
+            #selected-property {
+                margin-top: 20px;
+            }
+            .property-item {
+                padding: 15px;
+                margin: 10px 0;
+                background: #f0f0f0;
+                border-radius: 4px;
+                border: 2px solid transparent;
+                cursor: pointer;
+                transition: all 0.3s;
+            }
+            .property-item:hover {
+                background: #e0e0e0;
+                border-color: #4caf50;
+            }
+            .property-item.selected {
+                background: #c8e6c9;
+                border-color: #4caf50;
+            }
+            .property-item strong {
+                font-size: 16px;
+                color: #333;
+            }
+            .property-item small {
+                color: #666;
+            }
+            .selected-badge {
+                background: #4caf50;
+                color: white;
+                padding: 3px 8px;
+                border-radius: 3px;
+                font-size: 12px;
+                margin-left: 10px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Welcome to GA4 Dashboard</h1>
+
+            {% if user.is_authenticated %}
+            <div class="user-info">
+                <h2>Hello, {{ user.username }}!</h2>
+                <p>You are logged in.</p>
+                <a href="{% url 'logout' %}" class="button logout-btn"
+                    >Logout</a
+                >
+            </div>
+
+            <div class="ga-status">
+                <h3>Google Analytics Connection</h3>
+                <p id="ga-status">Checking connection...</p>
+                <div id="ga-actions"></div>
+            </div>
+
+            <div id="selected-property"></div>
+
+            <div id="properties"></div>
+            {% else %}
+            <div class="user-info">
+                <h2>Welcome!</h2>
+                <p>
+                    Please login or register to access Google Analytics
+                    features.
+                </p>
+                <a href="{% url 'login' %}" class="button">Login</a>
+                <a href="{% url 'register' %}" class="button">Register</a>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if user.is_authenticated %}
+        <script>
+            let selectedPropertyId = null;
+
+            // Check GA connection status
+            async function checkGAConnection() {
+                try {
+                    const response = await fetch(
+                        "/accounts/check-ga-connection/"
+                    );
+                    const data = await response.json();
+
+                    const statusEl = document.getElementById("ga-status");
+                    const actionsEl = document.getElementById("ga-actions");
+
+                    if (data.connected) {
+                        statusEl.innerHTML =
+                            '<span class="connected">✓ Google Analytics Connected</span>';
+                        actionsEl.innerHTML = `
+                            <button onclick="loadProperties()">Load GA4 Properties</button>
+                            <button onclick="disconnectGA()" class="disconnect-btn">Disconnect Google Analytics</button>
+                        `;
+
+                        // Check for selected property
+                        checkSelectedProperty();
+                    } else {
+                        statusEl.innerHTML =
+                            '<span class="not-connected">⚠ Google Analytics Not Connected</span>';
+                        actionsEl.innerHTML =
+                            '<a href="/accounts/connect-google/" class="button">Connect Google Analytics</a>';
+                    }
+                } catch (error) {
+                    console.error("Error checking GA connection:", error);
+                }
+            }
+
+            // Check selected property
+            async function checkSelectedProperty() {
+                try {
+                    const response = await fetch(
+                        "/accounts/get-selected-property/"
+                    );
+                    const data = await response.json();
+
+                    const selectedEl =
+                        document.getElementById("selected-property");
+
+                    if (data.selected) {
+                        selectedPropertyId = data.property_id;
+                        selectedEl.innerHTML = `
+                            <div style="background: #e8f5e9; padding: 15px; border-radius: 4px; margin: 20px 0;">
+                                <h4 style="margin: 0 0 10px 0;">Selected Property</h4>
+                                <p style="margin: 0;"><strong>${data.property_name}</strong></p>
+                                <p style="margin: 5px 0 0 0; font-size: 14px; color: #666;">${data.property_id}</p>
+                            </div>
+                        `;
+                    } else {
+                        selectedEl.innerHTML = `
+                            <div style="background: #fff3cd; padding: 15px; border-radius: 4px; margin: 20px 0;">
+                                <p style="margin: 0;">⚠️ No property selected. Please load and select a GA4 property below.</p>
+                            </div>
+                        `;
+                    }
+                } catch (error) {
+                    console.error("Error checking selected property:", error);
+                }
+            }
+
+            // Load GA4 properties
+            async function loadProperties() {
+                const propertiesEl = document.getElementById("properties");
+                propertiesEl.innerHTML = "<p>Loading properties...</p>";
+
+                try {
+                    const response = await fetch("/accounts/ga4-properties/");
+                    const data = await response.json();
+
+                    console.log("Response data:", data);
+                    console.log("Connected:", data.connected);
+                    console.log("Properties:", data.properties);
+
+                    if (data.connected === true && data.properties) {
+                        let html =
+                            "<h3>Your GA4 Properties (Click to Select):</h3>";
+
+                        if (data.properties.length > 0) {
+                            data.properties.forEach((prop) => {
+                                const isSelected =
+                                    prop.property_id === selectedPropertyId;
+                                html += `<div class="property-item ${
+                                    isSelected ? "selected" : ""
+                                }" onclick="selectProperty('${
+                                    prop.property_id
+                                }', '${escapeHtml(prop.property_name)}')">`;
+                                html += `<strong>${escapeHtml(
+                                    prop.property_name
+                                )}</strong>`;
+                                if (isSelected) {
+                                    html += `<span class="selected-badge">✓ SELECTED</span>`;
+                                }
+                                html += `<br><small>Property ID: ${prop.property_id}</small>`;
+                                html += `<br><small>Account: ${escapeHtml(
+                                    prop.account_name
+                                )}</small>`;
+                                html += `</div>`;
+                            });
+                        } else {
+                            html += "<p><em>No properties found</em></p>";
+                        }
+
+                        propertiesEl.innerHTML = html;
+                    } else if (data.error) {
+                        propertiesEl.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
+                        if (data.traceback) {
+                            console.error("Traceback:", data.traceback);
+                        }
+                    } else {
+                        propertiesEl.innerHTML = `<p style="color: red;">Data received but format unexpected. Check console.</p>`;
+                        console.error("Unexpected data format:", data);
+                    }
+                } catch (error) {
+                    propertiesEl.innerHTML = `<p style="color: red;">Error loading properties: ${error.message}</p>`;
+                    console.error("Fetch error:", error);
+                }
+            }
+
+            // Select a property
+            async function selectProperty(propertyId, propertyName) {
+                try {
+                    const response = await fetch("/accounts/select-property/", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": getCookie("csrftoken"),
+                        },
+                        body: JSON.stringify({
+                            property_id: propertyId,
+                            property_name: propertyName,
+                        }),
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        alert(data.message);
+                        selectedPropertyId = propertyId;
+                        checkSelectedProperty();
+                        loadProperties(); // Reload to update selected state
+                    } else {
+                        alert("Error selecting property: " + data.message);
+                    }
+                } catch (error) {
+                    alert("Error: " + error.message);
+                }
+            }
+
+            // Disconnect GA
+            async function disconnectGA() {
+                if (
+                    !confirm(
+                        "Are you sure you want to disconnect Google Analytics?"
+                    )
+                ) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch(
+                        "/accounts/disconnect-google/"
+                    );
+                    const data = await response.json();
+
+                    if (data.success) {
+                        alert("Google Analytics disconnected successfully");
+                        document.getElementById("properties").innerHTML = "";
+                        document.getElementById("selected-property").innerHTML =
+                            "";
+                        selectedPropertyId = null;
+                        checkGAConnection();
+                    } else {
+                        alert("Error disconnecting: " + data.message);
+                    }
+                } catch (error) {
+                    alert("Error: " + error.message);
+                }
+            }
+
+            // Helper function to escape HTML
+            function escapeHtml(text) {
+                const div = document.createElement("div");
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            // Get CSRF token from cookies
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== "") {
+                    const cookies = document.cookie.split(";");
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (
+                            cookie.substring(0, name.length + 1) ===
+                            name + "="
+                        ) {
+                            cookieValue = decodeURIComponent(
+                                cookie.substring(name.length + 1)
+                            );
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+
+            // Check connection on page load
+            checkGAConnection();
+        </script>
+        {% endif %}
+    </body>
+</html>
