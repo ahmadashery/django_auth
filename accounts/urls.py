@@ -23,13 +23,13 @@ urlpatterns = [
     path("check-auth/", views.check_auth, name="check_auth"),
     path("get-csrf-token/", views.get_csrf_token, name="get_csrf_token"),
     # Google Analytics OAuth
-    # path("connect-google/", views.connect_google_analytics, name="connect_google"),
-    # path("google/callback/", views.google_callback, name="google_callback"),
-    # path(
-    #     "disconnect-google/",
-    #     views.disconnect_google_analytics,
-    #     name="disconnect_google",
-    # ),
-    # path("check-ga-connection/", views.check_ga_connection, name="check_ga_connection"),
-    # path("ga4-properties/", views.list_ga4_properties, name="list_ga4_properties"),
+    path("connect-google/", views.connect_google_analytics, name="connect_google"),
+    path("google/callback/", views.google_callback, name="google_callback"),
+    path(
+        "disconnect-google/",
+        views.disconnect_google_analytics,
+        name="disconnect_google",
+    ),
+    path("check-ga-connection/", views.check_ga_connection, name="check_ga_connection"),
+    path("ga4-properties/", views.list_ga4_properties, name="list_ga4_properties"),
 ]
